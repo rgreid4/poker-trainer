@@ -170,8 +170,10 @@ export function suggestedRaiseTotals(
     } else {
       // 3-bet or better: 3x the last bet, plus one unit per cold caller.
       const callers = callersThisStreet(state);
-      out.push({ to: roundToChip(state.currentBet * 3 + callers * state.currentBet, smallBlind), sizing: "threebet" });
-      out.push({ to: roundToChip(state.currentBet * 4 + callers * state.currentBet, smallBlind), sizing: "threebet" });
+      // 3x the last bet plus one big blind per cold caller. Going to a full extra
+      // raise per caller balloons past the stack in a limpy multiway pot.
+      out.push({ to: roundToChip(state.currentBet * 3 + callers * bigBlind, smallBlind), sizing: "threebet" });
+      out.push({ to: roundToChip(state.currentBet * 4 + callers * bigBlind, smallBlind), sizing: "threebet" });
     }
     return out;
   }
