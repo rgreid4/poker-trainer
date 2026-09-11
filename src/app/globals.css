@@ -1,0 +1,18 @@
+@import "tailwindcss";
+
+:root {
+  --felt: #17593f;
+  --felt-dark: #0d3c2a;
+  --rail: #3d2b1d;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  background: radial-gradient(circle at 50% 0%, var(--felt) 0%, var(--felt-dark) 65%, #08211a 100%);
+  color: #f5f5f4;
+  -webkit-font-smoothing: antialiased;
+}
