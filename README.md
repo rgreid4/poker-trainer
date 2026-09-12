@@ -48,6 +48,8 @@ directly and reused by the drills.
 | `src/lib/ranges.ts` | The 169-hand grid and the usual range shorthand |
 | `src/lib/opponents/` | Opponent archetypes, their decision model, and the range reads |
 | `src/lib/strategy/` | Recommending a play, grading the choice, and explaining why |
+| `src/lib/practice/` | Practice modes and the spot-drill generators |
+| `src/lib/stats.ts` | Progress tracking, persisted to localStorage |
 | `src/lib/dealer.ts` | Starting hands, filling the table, playing opponents out |
 | `src/data/` | **Tuning files** — ranges, tendencies and thresholds you can edit |
 | `src/app/`, `src/components/` | The UI |
@@ -85,7 +87,8 @@ house-game adjustment that would be a mistake against good players, it says that
 - **Phase 3 — strategy engine and feedback: done.** Every decision is graded Best
   through Blunder, with the recommended play, the reasoning in terms of these
   opponents, the numbers behind it, and one key concept.
-- Phase 4 — practice modes and stats.
+- **Phase 4 — practice modes and stats: done.** Full hands, a preflop drill, six
+  house-game spot drills, and progress tracking in localStorage.
 - Phase 5 — polish.
 
 ## How a decision gets graded
@@ -107,3 +110,31 @@ house-game adjustment that would be a mistake against good players, it says that
 5. **Explain it.** Two to four sentences naming the tendency being exploited, the
    numbers, one key concept, and a flag when the recommendation is a house-game
    adjustment that would be a leak against strong players.
+
+## Practice modes
+
+- **Full hands** — every street from the deal to showdown.
+- **Preflop drill** — one preflop decision per hand, graded immediately, then the
+  next hand. Fast reps.
+- **Spot drills** — isolating limpers, multiway pots, thin value against calling
+  stations, folding to passive aggression, draws with several callers, and
+  short-stack all-ins.
+
+The spot drills do not build positions by hand. They deal real hands and play the
+ones that miss, so the stacks, ranges and action history all belong to a game that
+actually happened. If a drill cannot produce its situation within a hundred or so
+deals it says so and gives you an ordinary hand rather than faking one.
+
+## Progress tracking
+
+Stats live in `localStorage` under `poker-trainer/stats/v1`:
+
+- hands played, decisions, and the share graded Good or better
+- accuracy by street and by concept, with the weakest concepts listed first
+- your last twenty mistakes and blunders, each with the hand, what you did, what was
+  better, and the one sentence that explains why
+- net at the table across full hands (drills are excluded, since they are not real
+  money)
+
+There is a reset button behind a confirmation in the stats panel. Nothing leaves the
+browser.

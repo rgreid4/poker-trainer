@@ -2,10 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { type Rng, makeRng } from "@/lib/cards";
-import { DEFAULT_SETTINGS, startHand, stepOpponent } from "@/lib/dealer";
+import { DEFAULT_SETTINGS, stepOpponent } from "@/lib/dealer";
 import { type ActionInput, applyAction, isHandOver } from "@/lib/handEngine";
+import { type PracticeModeId, DEFAULT_MODE, practiceMode } from "@/lib/practice/modes";
+import { setupPractice } from "@/lib/practice/spots";
 import { type DecisionRecord, evaluateChoice } from "@/lib/strategy/decision";
 import { EQUITY_ITERATIONS } from "@/data/thresholds";
+import type { Cents } from "@/lib/money";
 import type { HandState } from "@/lib/types";
 
 export interface TrainerSettings {
@@ -13,13 +16,22 @@ export interface TrainerSettings {
   showProfiles: boolean;
   /** Pause between opponent actions, in milliseconds. */
   speedMs: number;
+  mode: PracticeModeId;
 }
 
 export const DEFAULT_TRAINER_SETTINGS: TrainerSettings = {
   tableSize: 6,
   showProfiles: true,
   speedMs: 550,
+  mode: DEFAULT_MODE,
 };
+
+export interface UseTrainerOptions {
+  initialSettings?: Partial<TrainerSettings>;
+  onDecision?: (record: DecisionRecord) => void;
+  /** Called once per finished hand. `net` is undefined for drills. */
+  onHandComplete?: (net?: Cents) => void;
+}
 
 export interface Trainer {
   state: HandState | null;
@@ -27,58 +39,83 @@ export interface Trainer {
   setSettings: (update: Partial<TrainerSettings>) => void;
   /** True while the hero has a decision in front of them. */
   isHeroTurn: boolean;
+  /** True when the hand is over, or the drill has had its one decision. */
   handOver: boolean;
   handNumber: number;
   /** Every graded hero decision in the current hand. */
   decisions: DecisionRecord[];
   /** The most recent graded decision, shown in the feedback panel. */
   feedback: DecisionRecord | null;
+  /** True when a drill could not build its situation and dealt a normal hand. */
+  spotFallback: boolean;
   act: (action: ActionInput) => void;
   deal: () => void;
 }
 
-export function useTrainer(initial: Partial<TrainerSettings> = {}): Trainer {
+export function useTrainer(options: UseTrainerOptions = {}): Trainer {
   const [settings, setSettingsState] = useState<TrainerSettings>({
     ...DEFAULT_TRAINER_SETTINGS,
-    ...initial,
+    ...options.initialSettings,
   });
   const [state, setState] = useState<HandState | null>(null);
   const [handNumber, setHandNumber] = useState(0);
   const [decisions, setDecisions] = useState<DecisionRecord[]>([]);
   const [feedback, setFeedback] = useState<DecisionRecord | null>(null);
+  const [spotFallback, setSpotFallback] = useState(false);
+  const [drillDone, setDrillDone] = useState(false);
+
   const rngRef = useRef<Rng | null>(null);
   // A separate stream for the equity simulator, so grading never disturbs the
   // sequence of cards the table is dealt.
   const strategyRngRef = useRef<Rng | null>(null);
+  const countedHandRef = useRef(0);
+
+  // Callbacks live in refs so a new function identity never re-deals the hand.
+  const onDecisionRef = useRef(options.onDecision);
+  const onHandCompleteRef = useRef(options.onHandComplete);
+  onDecisionRef.current = options.onDecision;
+  onHandCompleteRef.current = options.onHandComplete;
+
+  const { tableSize, mode, speedMs } = settings;
 
   const deal = useCallback(() => {
     // Seeded on the client only, so the server-rendered markup stays stable.
     if (!rngRef.current) rngRef.current = makeRng((Date.now() ^ 0x5f3759df) >>> 0);
     if (!strategyRngRef.current) strategyRngRef.current = makeRng(0x9e3779b9);
-    setState(
-      startHand({
-        rng: rngRef.current,
-        settings: { ...DEFAULT_SETTINGS, tableSize: settings.tableSize },
-      }),
-    );
+
+    const setup = setupPractice(mode, rngRef.current, {
+      ...DEFAULT_SETTINGS,
+      tableSize,
+    });
+
+    setState(setup.state);
+    setSpotFallback(setup.fallback);
     setDecisions([]);
     setFeedback(null);
+    setDrillDone(false);
     setHandNumber((n) => n + 1);
-  }, [settings.tableSize]);
+  }, [mode, tableSize]);
 
-  // Deal the first hand once mounted, and a fresh one whenever the table changes.
+  // Deal the first hand once mounted, and a fresh one whenever the table or
+  // the practice mode changes.
   useEffect(() => {
     deal();
   }, [deal]);
 
   const isHeroTurn = Boolean(
-    state && !isHandOver(state) && state.actingSeat !== null && state.players[state.actingSeat].isHero,
+    state &&
+      !drillDone &&
+      !isHandOver(state) &&
+      state.actingSeat !== null &&
+      state.players[state.actingSeat].isHero,
   );
+
+  const handOver = Boolean(state && (isHandOver(state) || drillDone));
 
   // Opponents act on a timer so the table reads like a real hand rather than
   // resolving instantly.
   useEffect(() => {
-    if (!state || isHandOver(state) || state.actingSeat === null) return;
+    if (!state || drillDone || isHandOver(state) || state.actingSeat === null) return;
     if (state.players[state.actingSeat].isHero) return;
 
     const timer = setTimeout(() => {
@@ -87,10 +124,22 @@ export function useTrainer(initial: Partial<TrainerSettings> = {}): Trainer {
         if (current.players[current.actingSeat].isHero) return current;
         return stepOpponent(current, rngRef.current as Rng);
       });
-    }, settings.speedMs);
+    }, speedMs);
 
     return () => clearTimeout(timer);
-  }, [state, settings.speedMs]);
+  }, [state, speedMs, drillDone]);
+
+  // Count each finished hand exactly once.
+  useEffect(() => {
+    if (!state || !handOver) return;
+    if (countedHandRef.current === handNumber) return;
+    countedHandRef.current = handNumber;
+    const net =
+      isHandOver(state) && state.result
+        ? state.result.net[state.config.heroSeat]
+        : undefined;
+    onHandCompleteRef.current?.(net);
+  }, [state, handOver, handNumber]);
 
   const act = useCallback(
     (action: ActionInput) => {
@@ -103,13 +152,17 @@ export function useTrainer(initial: Partial<TrainerSettings> = {}): Trainer {
         state,
         action,
         strategyRngRef.current as Rng,
-        EQUITY_ITERATIONS.full,
+        practiceMode(mode).kind === "preflop" ? EQUITY_ITERATIONS.drill : EQUITY_ITERATIONS.full,
       );
       setDecisions((prev) => [...prev, record]);
       setFeedback(record);
+      onDecisionRef.current?.(record);
+
       setState(applyAction(state, action));
+      // The preflop drill is one decision per hand: grade it and move on.
+      if (practiceMode(mode).kind === "preflop") setDrillDone(true);
     },
-    [state],
+    [state, mode],
   );
 
   const setSettings = useCallback((update: Partial<TrainerSettings>) => {
@@ -122,13 +175,26 @@ export function useTrainer(initial: Partial<TrainerSettings> = {}): Trainer {
       settings,
       setSettings,
       isHeroTurn,
-      handOver: Boolean(state && isHandOver(state)),
+      handOver,
       handNumber,
       decisions,
       feedback,
+      spotFallback,
       act,
       deal,
     }),
-    [state, settings, setSettings, isHeroTurn, handNumber, decisions, feedback, act, deal],
+    [
+      state,
+      settings,
+      setSettings,
+      isHeroTurn,
+      handOver,
+      handNumber,
+      decisions,
+      feedback,
+      spotFallback,
+      act,
+      deal,
+    ],
   );
 }

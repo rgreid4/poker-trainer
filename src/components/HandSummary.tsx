@@ -20,7 +20,11 @@ export function HandSummary({ state, decisions, onNextHand }: HandSummaryProps) 
   return (
     <section className="flex w-full flex-col gap-3">
       <div className="text-center text-sm text-white/75">
-        {state.result?.summary}
+        {state.result ? (
+          state.result.summary
+        ) : (
+          <span className="text-white/50">Drill spot graded — the hand stops here.</span>
+        )}
         {net !== 0 ? (
           <span className={`ml-1 font-semibold ${net > 0 ? "text-emerald-300" : "text-rose-300"}`}>
             ({net > 0 ? "+" : ""}
