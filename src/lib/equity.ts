@@ -5,8 +5,12 @@ import { type RangeCombo, type WeightedRange, rangeCombos } from "./ranges";
 export interface EquityOptions {
   hero: readonly Card[];
   board: readonly Card[];
-  /** One weighted range per opponent still in the hand. */
-  opponents: readonly WeightedRange[];
+  /**
+   * One range per opponent still in the hand. Either the 169-hand grid form or
+   * an already expanded list of combos, which is what the opponent model
+   * produces once it has weighted individual holdings against the board.
+   */
+  opponents: ReadonlyArray<WeightedRange | RangeCombo[]>;
   iterations?: number;
   rng: Rng;
 }
@@ -28,8 +32,11 @@ interface PreparedRange {
   total: number;
 }
 
-function prepare(range: WeightedRange, blocked: readonly Card[]): PreparedRange {
-  const combos = rangeCombos(range, blocked);
+function prepare(range: WeightedRange | RangeCombo[], blocked: readonly Card[]): PreparedRange {
+  const dead = new Set(blocked);
+  const combos = Array.isArray(range)
+    ? range.filter((c) => c.weight > 0 && !dead.has(c.cards[0]) && !dead.has(c.cards[1]))
+    : rangeCombos(range, blocked);
   const cumulative = new Float64Array(combos.length);
   let total = 0;
   for (let i = 0; i < combos.length; i++) {

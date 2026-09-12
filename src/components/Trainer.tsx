@@ -8,6 +8,8 @@ import { formatMoney, formatMoneyWithBB } from "@/lib/money";
 import { potNow } from "@/lib/handEngine";
 import { ActionBar } from "./ActionBar";
 import { ActionLog } from "./ActionLog";
+import { FeedbackPanel } from "./FeedbackPanel";
+import { HandSummary } from "./HandSummary";
 import { PokerTable } from "./PokerTable";
 
 const TABLE_SIZES = Array.from({ length: MAX_PLAYERS - MIN_PLAYERS + 1 }, (_, i) => i + MIN_PLAYERS);
@@ -100,30 +102,11 @@ export function Trainer() {
                 <ActionBar state={state} onAction={trainer.act} />
               </>
             ) : handOver ? (
-              <>
-                <div className="text-center text-sm text-white/70">
-                  {state.result?.summary}
-                  {state.result && state.result.net[state.config.heroSeat] !== 0 ? (
-                    <span
-                      className={`ml-1 font-semibold ${
-                        state.result.net[state.config.heroSeat] > 0
-                          ? "text-emerald-300"
-                          : "text-rose-300"
-                      }`}
-                    >
-                      ({state.result.net[state.config.heroSeat] > 0 ? "+" : ""}
-                      {formatMoney(state.result.net[state.config.heroSeat])})
-                    </span>
-                  ) : null}
-                </div>
-                <button
-                  type="button"
-                  onClick={trainer.deal}
-                  className="rounded-lg bg-emerald-600 px-6 py-2 text-sm font-semibold text-white ring-1 ring-emerald-300/40 transition hover:bg-emerald-500 active:scale-[0.98]"
-                >
-                  Next hand
-                </button>
-              </>
+              <HandSummary
+                state={state}
+                decisions={trainer.decisions}
+                onNextHand={trainer.deal}
+              />
             ) : (
               <div className="flex items-center gap-2 py-4 text-sm text-white/45">
                 <span className="h-2 w-2 animate-ping rounded-full bg-emerald-400" />
@@ -135,8 +118,11 @@ export function Trainer() {
           </div>
         </div>
 
-        <aside className="lg:w-72 lg:shrink-0">
-          <ActionLog state={state} />
+        <aside className="flex flex-col gap-3 lg:w-80 lg:shrink-0">
+          {trainer.feedback ? <FeedbackPanel decision={trainer.feedback} /> : null}
+          <div className="min-h-40 flex-1">
+            <ActionLog state={state} />
+          </div>
         </aside>
       </div>
     </main>

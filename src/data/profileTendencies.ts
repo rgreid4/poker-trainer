@@ -68,7 +68,7 @@ export const PROFILES: Record<Exclude<ProfileId, "hero">, OpponentProfile> = {
     name: "Maniac",
     badge: "MAN",
     icon: "🔥",
-    blurb: "Raises and bluffs far too much. Pay him off lighter, and trap more.",
+    blurb: "Raises and bluffs far too much. Pay them off lighter, and trap more.",
     badgeClass: "bg-rose-500/20 text-rose-200 ring-rose-400/40",
     tendencies: {
       vpip: 0.62,

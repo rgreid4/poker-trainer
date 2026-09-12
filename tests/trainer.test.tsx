@@ -94,3 +94,47 @@ describe("the trainer table", () => {
     });
   }, 20000);
 });
+
+describe("feedback", () => {
+  it("grades the decision and shows the reasoning and the numbers", async () => {
+    const user = userEvent.setup();
+    render(<Trainer />);
+    await waitForHeroTurn();
+
+    const button =
+      screen.queryByRole("button", { name: /^Check/ }) ??
+      screen.queryByRole("button", { name: /^Fold/ });
+    if (!button) return;
+    await user.click(button);
+
+    // A grade badge appears with the recommended play and the key concept.
+    const grade = await waitFor(
+      () => screen.getByText(/^(Best|Good|Acceptable|Mistake|Blunder)$/),
+      { timeout: 8000 },
+    );
+    expect(grade).toBeTruthy();
+    expect(screen.getByText(/Equity/)).toBeTruthy();
+    expect(screen.getByText(/decision$/i)).toBeTruthy();
+  }, 25000);
+
+  it("lists every graded decision in the hand summary", async () => {
+    const user = userEvent.setup();
+    render(<Trainer />);
+    await waitForHeroTurn();
+
+    for (let i = 0; i < 40; i++) {
+      if (screen.queryByRole("button", { name: /Next hand/ })) break;
+      const check = screen.queryByRole("button", { name: /^Check/ });
+      const call = screen.queryByRole("button", { name: /^Call/ });
+      if (check ?? call) await user.click((check ?? call) as HTMLElement);
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 250));
+      });
+    }
+
+    await waitFor(() => expect(screen.getByRole("button", { name: /Next hand/ })).toBeTruthy(), {
+      timeout: 15000,
+    });
+    expect(screen.getByText(/decisions graded good or better/)).toBeTruthy();
+  }, 30000);
+});

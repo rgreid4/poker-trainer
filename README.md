@@ -46,7 +46,8 @@ directly and reused by the drills.
 | `src/lib/handAnalysis.ts` | What a holding actually is: top pair, draws, tiers |
 | `src/lib/equity.ts` | Monte Carlo equity against weighted opponent ranges |
 | `src/lib/ranges.ts` | The 169-hand grid and the usual range shorthand |
-| `src/lib/opponents/` | Opponent archetypes and the decision model that drives them |
+| `src/lib/opponents/` | Opponent archetypes, their decision model, and the range reads |
+| `src/lib/strategy/` | Recommending a play, grading the choice, and explaining why |
 | `src/lib/dealer.ts` | Starting hands, filling the table, playing opponents out |
 | `src/data/` | **Tuning files** — ranges, tendencies and thresholds you can edit |
 | `src/app/`, `src/components/` | The UI |
@@ -61,6 +62,10 @@ The numbers are deliberately kept out of the logic:
   each archetype shows up at the table.
 - `src/data/handRanking.ts` — the starting-hand strength order used to build
   "this player enters with 55% of hands" ranges.
+- `src/data/thresholds.ts` — the equity, pot-odds, bet-sizing and grading cutoffs the
+  strategy engine compares against.
+- `src/data/rangeWeights.ts` — how to read an opponent: how much each hand tier is
+  discounted when a passive player checks, calls, bets small, bets big, or raises.
 
 Edit any of them and the engine, the opponents and the grading follow.
 
@@ -75,7 +80,30 @@ house-game adjustment that would be a mistake against good players, it says that
 
 - **Phase 1 — game engine and tests: done.** Deck, evaluator, betting rules, side
   pots, the hand state machine, opponent model and Monte Carlo equity, all under test.
-- Phase 2 — table UI and full hand playthrough.
-- Phase 3 — strategy engine and feedback.
+- **Phase 2 — table UI and full hand playthrough: done.** Felt table, position labels,
+  profile badges, action buttons in dollars and big blinds, showdown and hand history.
+- **Phase 3 — strategy engine and feedback: done.** Every decision is graded Best
+  through Blunder, with the recommended play, the reasoning in terms of these
+  opponents, the numbers behind it, and one key concept.
 - Phase 4 — practice modes and stats.
 - Phase 5 — polish.
+
+## How a decision gets graded
+
+1. **Read the opponents.** Each live opponent starts from the preflop range their
+   archetype plays for the line they took — a calling station who limped is on a
+   very wide range, one who raised is on roughly the top 7% — then every combo is
+   weighted by how consistent it is with what they have done on each street since.
+   A passive player who check-raises keeps almost nothing but two pair or better.
+2. **Measure.** Monte Carlo equity (a few thousand runouts) against those weighted
+   ranges, plus exact pot odds, SPR and effective stacks.
+3. **Score every legal option.** Fold, check, call and each offered bet size get a
+   score from the thresholds in `src/data/thresholds.ts`, including how well the
+   size matches the plan — so betting the right amount is graded too.
+4. **Grade by the gap, never by the result.** The top action is Best; the bands for
+   Good, Acceptable, Mistake and Blunder come from how far short the chosen action
+   fell. When two plays are within a hair of each other the trainer says the spot is
+   close and marks both as fine.
+5. **Explain it.** Two to four sentences naming the tendency being exploited, the
+   numbers, one key concept, and a flag when the recommendation is a house-game
+   adjustment that would be a leak against strong players.

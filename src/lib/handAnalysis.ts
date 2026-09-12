@@ -37,7 +37,15 @@ export function tierRank(tier: HandTier): number {
   return TIER_ORDER.indexOf(tier);
 }
 
-export type PairKind = "none" | "overpair" | "top" | "middle" | "bottom" | "underpair" | "pocket";
+export type PairKind =
+  | "none"
+  | "overpair"
+  | "top"
+  | "middle"
+  | "bottom"
+  | "underpair"
+  /** The pair is entirely on the board: everyone has it and you have nothing. */
+  | "board";
 
 export interface Draws {
   flushDraw: boolean;
@@ -138,7 +146,8 @@ export function analyzeHand(hole: readonly Card[], board: readonly Card[]): Hand
         else if (pairedRank === boardRanks[boardRanks.length - 1]) pairKind = "bottom";
         else pairKind = "middle";
       } else {
-        pairKind = "pocket";
+        // The pair is on the board, so this hand is really just high cards.
+        pairKind = "board";
       }
     }
   }
@@ -153,7 +162,7 @@ export function analyzeHand(hole: readonly Card[], board: readonly Card[]): Hand
     kicker,
     draws,
     isStrongMade,
-    label: describeTier(tier, draws),
+    label: describeTier(tier, draws, pairKind),
   };
 }
 
@@ -177,8 +186,10 @@ function classifyTier(
       case "top":
         return kicker >= HIGH_KICKER ? "top_pair_good_kicker" : "top_pair_weak_kicker";
       case "middle":
-      case "pocket":
         return "marginal_pair";
+      case "board":
+        // Playing the board is not a made hand worth betting or calling with.
+        return strongDraw ? "strong_draw" : draws.gutshot ? "weak_draw" : "air";
       case "underpair":
       case "bottom":
         return strongDraw ? "strong_draw" : "weak_pair";
@@ -192,7 +203,8 @@ function classifyTier(
   return "air";
 }
 
-function describeTier(tier: HandTier, draws: Draws): string {
+function describeTier(tier: HandTier, draws: Draws, pairKind: PairKind = "none"): string {
+  if (tier === "air" && pairKind === "board") return "no pair of your own — you are playing the board";
   switch (tier) {
     case "monster":
       return "a monster";

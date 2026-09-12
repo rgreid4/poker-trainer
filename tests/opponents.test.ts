@@ -172,3 +172,31 @@ describe("opponent profiles behave like the players they model", () => {
     expect(build("tight")).toBeGreaterThan(build("station"));
   });
 });
+
+describe("board pairs are not your pair", () => {
+  it("treats a pair that is entirely on the board as air", () => {
+    // J3 on A-5-5: everyone plays the fives, so this is high cards only.
+    const analysis = analyzeHand(parseCards("Jh 3d"), parseCards("Ad 5s 5h"));
+    expect(analysis.pairKind).toBe("board");
+    expect(analysis.tier).toBe("air");
+    expect(analysis.label).toMatch(/playing the board/);
+  });
+
+  it("still counts a draw alongside a board pair", () => {
+    const analysis = analyzeHand(parseCards("Jh 9h"), parseCards("Ah 5s 5h"));
+    expect(analysis.pairKind).toBe("board");
+    expect(analysis.tier).toBe("strong_draw");
+  });
+
+  it("keeps a real pair when a hole card matches the board", () => {
+    // The eight is the middle card of A-8-5, so this is middle pair.
+    const middle = analyzeHand(parseCards("8c 3d"), parseCards("Ad 8s 5h"));
+    expect(middle.pairKind).toBe("middle");
+    expect(middle.tier).toBe("marginal_pair");
+
+    // The five is the bottom card, so this is bottom pair.
+    const bottom = analyzeHand(parseCards("5c 3d"), parseCards("Ad 5s 8h"));
+    expect(bottom.pairKind).toBe("bottom");
+    expect(bottom.tier).toBe("weak_pair");
+  });
+});
