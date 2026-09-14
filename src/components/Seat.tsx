@@ -24,7 +24,7 @@ export function Seat({ state, seat, showProfiles, lastAction, isWinner }: SeatPr
   // narrow phone gets a proportionally smaller table rather than a broken one.
   return (
     <div
-      className={`flex w-[4.5rem] flex-col items-center gap-0.5 transition-opacity duration-200 @min-[560px]:w-32 @min-[560px]:gap-1 ${
+      className={`flex w-16 flex-col items-center gap-0.5 transition-opacity duration-200 @min-[420px]:w-[4.5rem] @min-[560px]:w-32 @min-[560px]:gap-1 ${
         folded ? "opacity-40" : "opacity-100"
       }`}
     >

@@ -10,14 +10,18 @@ import { formatMoney, formatMoneyWithBB } from "@/lib/money";
 import { PRACTICE_MODES, type PracticeModeId, practiceMode } from "@/lib/practice/modes";
 import { formatAccuracy, overallAccuracy } from "@/lib/stats";
 import { MAX_PLAYERS, MIN_PLAYERS } from "@/lib/table";
+import { SPEED_FAST, SPEED_NORMAL } from "@/lib/settings";
 import { ActionBar } from "./ActionBar";
 import { ActionLog } from "./ActionLog";
 import { FeedbackPanel } from "./FeedbackPanel";
 import { HandSummary } from "./HandSummary";
+import { HelpPanel } from "./HelpPanel";
 import { PokerTable } from "./PokerTable";
 import { StatsPanel } from "./StatsPanel";
 
 const TABLE_SIZES = Array.from({ length: MAX_PLAYERS - MIN_PLAYERS + 1 }, (_, i) => i + MIN_PLAYERS);
+
+type View = "table" | "stats" | "help";
 
 export function Trainer() {
   const stats = useStats();
@@ -25,10 +29,11 @@ export function Trainer() {
     onDecision: stats.addDecision,
     onHandComplete: stats.addHand,
   });
-  const [showStats, setShowStats] = useState(false);
+  const [view, setView] = useState<View>("table");
 
   const { state, settings, setSettings, isHeroTurn, handOver, handNumber } = trainer;
   const mode = practiceMode(settings.mode);
+  const toggleView = (target: View) => setView((current) => (current === target ? "table" : target));
 
   if (!state) {
     return (
@@ -97,23 +102,30 @@ export function Trainer() {
                 : "bg-black/30 text-white/60 ring-white/10"
             }`}
             title="Hide the profile badges for a harder read"
+            aria-pressed={settings.showProfiles}
           >
-            {settings.showProfiles ? "Profiles shown" : "Profiles hidden"}
+            Profiles <span className="text-white/45">{settings.showProfiles ? "on" : "off"}</span>
           </button>
 
           <button
             type="button"
-            onClick={() => setSettings({ speedMs: settings.speedMs === 550 ? 180 : 550 })}
+            onClick={() =>
+              setSettings({
+                speedMs: settings.speedMs === SPEED_NORMAL ? SPEED_FAST : SPEED_NORMAL,
+              })
+            }
             className="rounded-lg bg-black/30 px-2.5 py-1.5 font-medium text-white/60 ring-1 ring-white/10 transition hover:text-white"
+            title="How long the opponents take to act"
           >
-            {settings.speedMs === 550 ? "Normal speed" : "Fast"}
+            {settings.speedMs === SPEED_NORMAL ? "Normal speed" : "Fast"}
           </button>
 
           <button
             type="button"
-            onClick={() => setShowStats((current) => !current)}
+            onClick={() => toggleView("stats")}
+            aria-pressed={view === "stats"}
             className={`rounded-lg px-2.5 py-1.5 font-medium ring-1 transition ${
-              showStats
+              view === "stats"
                 ? "bg-sky-600/30 text-sky-100 ring-sky-400/40"
                 : "bg-black/30 text-white/60 ring-white/10 hover:text-white"
             }`}
@@ -125,11 +137,28 @@ export function Trainer() {
               </span>
             ) : null}
           </button>
+
+          <button
+            type="button"
+            onClick={() => toggleView("help")}
+            aria-label="Help"
+            aria-pressed={view === "help"}
+            title="Positions, pot odds, grading, opponents and how to beat this game"
+            className={`h-7 w-7 rounded-full font-bold ring-1 transition ${
+              view === "help"
+                ? "bg-emerald-600/40 text-white ring-emerald-300/50"
+                : "bg-black/30 text-white/60 ring-white/10 hover:text-white"
+            }`}
+          >
+            ?
+          </button>
         </div>
       </header>
 
-      {showStats ? (
-        <StatsPanel stats={stats.stats} onReset={stats.reset} onClose={() => setShowStats(false)} />
+      {view === "help" ? (
+        <HelpPanel onClose={() => setView("table")} />
+      ) : view === "stats" ? (
+        <StatsPanel stats={stats.stats} onReset={stats.reset} onClose={() => setView("table")} />
       ) : (
         <>
           {mode.kind !== "full" ? (
@@ -146,7 +175,7 @@ export function Trainer() {
           ) : null}
 
           <div className="flex flex-1 flex-col gap-4 lg:flex-row">
-            <div className="flex flex-1 flex-col gap-3">
+            <div className="flex flex-col gap-3 lg:flex-1">
               <PokerTable state={state} showProfiles={settings.showProfiles} />
 
               <div className="flex min-h-24 flex-col items-center gap-2 rounded-xl bg-black/30 p-3 ring-1 ring-white/10">

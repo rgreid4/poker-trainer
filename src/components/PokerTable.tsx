@@ -31,7 +31,8 @@ export function PokerTable({ state, showProfiles }: PokerTableProps) {
   const seatOrder = Array.from({ length: tableSize }, (_, i) => (heroSeat + i) % tableSize);
 
   return (
-    <div className="@container relative mx-auto aspect-[6/5] w-full max-w-4xl @min-[560px]:aspect-[7/5]">
+    // Squarer on a phone so nine seats have somewhere to go.
+    <div className="@container relative mx-auto aspect-square w-full max-w-4xl @min-[420px]:aspect-[6/5] @min-[560px]:aspect-[7/5]">
       {/* Rail and felt */}
       <div className="absolute inset-[5%] rounded-[50%] bg-gradient-to-b from-[#4a3524] to-[#2b1d13] shadow-[0_10px_30px_rgba(0,0,0,0.45)] ring-1 ring-black/40" />
       <div className="absolute inset-[8.5%] rounded-[50%] bg-[radial-gradient(ellipse_at_50%_35%,#1c6b4b_0%,#12513a_55%,#0c3b2a_100%)] shadow-[inset_0_0_60px_rgba(0,0,0,0.5)] ring-1 ring-black/30" />
@@ -50,7 +51,8 @@ export function PokerTable({ state, showProfiles }: PokerTableProps) {
 
         <div className="flex min-h-11 items-center gap-0.5 @min-[560px]:min-h-16 @min-[560px]:gap-1">
           {state.board.length > 0 ? (
-            <CardRow cards={state.board} size="md" />
+            // Only the flop is dealt as a run of three; later cards land at once.
+            <CardRow cards={state.board} size="md" stagger={state.board.length === 3 ? 70 : 0} />
           ) : (
             <span className="text-[0.6rem] uppercase tracking-[0.3em] text-white/25 @min-[560px]:text-xs">
               preflop

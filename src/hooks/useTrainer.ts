@@ -4,25 +4,21 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { type Rng, makeRng } from "@/lib/cards";
 import { DEFAULT_SETTINGS, stepOpponent } from "@/lib/dealer";
 import { type ActionInput, applyAction, isHandOver } from "@/lib/handEngine";
-import { type PracticeModeId, DEFAULT_MODE, practiceMode } from "@/lib/practice/modes";
+import { DEFAULT_MODE, practiceMode } from "@/lib/practice/modes";
+import { type StoredSettings, SPEED_NORMAL, loadSettings, saveSettings } from "@/lib/settings";
 import { setupPractice } from "@/lib/practice/spots";
 import { type DecisionRecord, evaluateChoice } from "@/lib/strategy/decision";
 import { EQUITY_ITERATIONS } from "@/data/thresholds";
 import type { Cents } from "@/lib/money";
 import type { HandState } from "@/lib/types";
 
-export interface TrainerSettings {
-  tableSize: number;
-  showProfiles: boolean;
-  /** Pause between opponent actions, in milliseconds. */
-  speedMs: number;
-  mode: PracticeModeId;
-}
+/** Table and practice settings, persisted to localStorage between sessions. */
+export type TrainerSettings = StoredSettings;
 
 export const DEFAULT_TRAINER_SETTINGS: TrainerSettings = {
   tableSize: 6,
   showProfiles: true,
-  speedMs: 550,
+  speedMs: SPEED_NORMAL,
   mode: DEFAULT_MODE,
 };
 
@@ -53,10 +49,11 @@ export interface Trainer {
 }
 
 export function useTrainer(options: UseTrainerOptions = {}): Trainer {
-  const [settings, setSettingsState] = useState<TrainerSettings>({
-    ...DEFAULT_TRAINER_SETTINGS,
-    ...options.initialSettings,
-  });
+  // Read straight out of storage on the first client render. The table itself
+  // is not rendered until after mount, so this cannot desync hydration.
+  const [settings, setSettingsState] = useState<TrainerSettings>(() =>
+    loadSettings({ ...DEFAULT_TRAINER_SETTINGS, ...options.initialSettings }),
+  );
   const [state, setState] = useState<HandState | null>(null);
   const [handNumber, setHandNumber] = useState(0);
   const [decisions, setDecisions] = useState<DecisionRecord[]>([]);
@@ -168,6 +165,10 @@ export function useTrainer(options: UseTrainerOptions = {}): Trainer {
   const setSettings = useCallback((update: Partial<TrainerSettings>) => {
     setSettingsState((current) => ({ ...current, ...update }));
   }, []);
+
+  useEffect(() => {
+    saveSettings(settings);
+  }, [settings]);
 
   return useMemo(
     () => ({

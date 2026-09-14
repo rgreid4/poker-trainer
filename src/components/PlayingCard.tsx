@@ -61,11 +61,18 @@ export function CardRow({
   hidden,
   size,
   dimmed,
+  stagger = 70,
 }: {
   cards: readonly Card[];
   hidden?: boolean;
   size?: CardSize;
   dimmed?: boolean;
+  /**
+   * Milliseconds between each card landing. Set to zero when a single card is
+   * being added to a row that is already on the table, so the turn and river
+   * appear immediately instead of waiting their turn in the deal.
+   */
+  stagger?: number;
 }) {
   return (
     <div className="flex gap-1">
@@ -75,7 +82,7 @@ export function CardRow({
           card={card}
           hidden={hidden}
           size={size}
-          delay={index * 70}
+          delay={index * stagger}
           dimmed={dimmed}
         />
       ))}

@@ -75,11 +75,11 @@ describe("the trainer table", () => {
     render(<Trainer />);
     await waitFor(() => expect(screen.getByText(/Pot/)).toBeTruthy());
 
-    const toggle = screen.getByRole("button", { name: /Profiles shown/ });
+    const toggle = screen.getByRole("button", { name: /Profiles on/ });
     expect(screen.getAllByTitle(/Calls far too often|Limps in|Raises and bluffs|Plays few hands/).length).toBeGreaterThan(0);
 
     await user.click(toggle);
-    expect(screen.getByRole("button", { name: /Profiles hidden/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Profiles off/ })).toBeTruthy();
     expect(screen.queryAllByTitle(/Calls far too often|Limps in|Raises and bluffs|Plays few hands/)).toHaveLength(0);
   }, 20000);
 
@@ -207,5 +207,55 @@ describe("practice modes and stats", () => {
 
     await user.click(screen.getByRole("button", { name: /Back to the table/ }));
     await waitFor(() => expect(screen.queryByText(/Your progress/)).toBeNull());
+  }, 30000);
+});
+
+describe("help panel and settings memory", () => {
+  it("explains positions, pot odds, grading, opponents and the house rules", async () => {
+    const user = userEvent.setup();
+    render(<Trainer />);
+    await waitFor(() => expect(screen.getByLabelText(/Table size/)).toBeTruthy());
+
+    await user.click(screen.getByRole("button", { name: /Help/ }));
+
+    expect(screen.getByText(/How this trainer works/)).toBeTruthy();
+    expect(screen.getByText(/^Grading$/)).toBeTruthy();
+    expect(screen.getByText(/^Positions$/)).toBeTruthy();
+    expect(screen.getByText(/Pot odds and equity/)).toBeTruthy();
+    expect(screen.getByText(/Beating a loose home game/)).toBeTruthy();
+    expect(screen.getByText(/The opponents/)).toBeTruthy();
+    expect(screen.getByText(/Key concepts/)).toBeTruthy();
+    // Every grade and every archetype is described.
+    for (const grade of ["Best", "Good", "Acceptable", "Mistake", "Blunder"]) {
+      expect(screen.getAllByText(grade).length).toBeGreaterThan(0);
+    }
+    expect(screen.getByText(/Calling station/)).toBeTruthy();
+    expect(screen.getByText(/Maniac/)).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: /Back to the table/ }));
+    await waitFor(() => expect(screen.queryByText(/How this trainer works/)).toBeNull());
+  }, 30000);
+
+  it("remembers the table and practice settings between sessions", async () => {
+    const user = userEvent.setup();
+    window.localStorage.clear();
+
+    const first = render(<Trainer />);
+    await waitFor(() => expect(screen.getByLabelText(/Table size/)).toBeTruthy());
+    await user.selectOptions(screen.getByLabelText(/Table size/), "4");
+    await user.selectOptions(screen.getByLabelText(/Practice mode/), "draws");
+    await user.click(screen.getByRole("button", { name: /Profiles on/ }));
+
+    await waitFor(() =>
+      expect(window.localStorage.getItem("poker-trainer/settings/v1")).toContain('"mode":"draws"'),
+    );
+    first.unmount();
+
+    // A fresh visit picks the same settings back up.
+    render(<Trainer />);
+    await waitFor(() => expect(screen.getByLabelText(/Table size/)).toBeTruthy());
+    expect((screen.getByLabelText(/Table size/) as HTMLSelectElement).value).toBe("4");
+    expect((screen.getByLabelText(/Practice mode/) as HTMLSelectElement).value).toBe("draws");
+    expect(screen.getByRole("button", { name: /Profiles off/ })).toBeTruthy();
   }, 30000);
 });

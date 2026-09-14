@@ -50,6 +50,7 @@ directly and reused by the drills.
 | `src/lib/strategy/` | Recommending a play, grading the choice, and explaining why |
 | `src/lib/practice/` | Practice modes and the spot-drill generators |
 | `src/lib/stats.ts` | Progress tracking, persisted to localStorage |
+| `src/lib/settings.ts` | Table and practice settings, persisted and validated on load |
 | `src/lib/dealer.ts` | Starting hands, filling the table, playing opponents out |
 | `src/data/` | **Tuning files** — ranges, tendencies and thresholds you can edit |
 | `src/app/`, `src/components/` | The UI |
@@ -89,7 +90,8 @@ house-game adjustment that would be a mistake against good players, it says that
   opponents, the numbers behind it, and one key concept.
 - **Phase 4 — practice modes and stats: done.** Full hands, a preflop drill, six
   house-game spot drills, and progress tracking in localStorage.
-- Phase 5 — polish.
+- **Phase 5 — polish: done.** Help panel, remembered settings, animation and mobile
+  passes, and a guard that fails the tests on any React warning.
 
 ## How a decision gets graded
 
@@ -138,3 +140,22 @@ Stats live in `localStorage` under `poker-trainer/stats/v1`:
 
 There is a reset button behind a confirmation in the stats panel. Nothing leaves the
 browser.
+
+## Help and settings
+
+The **?** button opens a panel covering the grading scale, the four opponent
+archetypes and their tells, position by position play, pot odds and equity with a
+worked example, the nine rules for beating a loose home game, and every key concept
+the grader uses. Concepts that only apply to this kind of game are marked 🏠.
+
+Table size, practice mode, opponent-badge visibility and opponent speed are remembered
+in `localStorage` and validated on the way back in, so a hand-edited or stale value
+falls back to the default instead of breaking the table.
+
+## Testing notes
+
+`npm test` runs two projects: the engine suite in Node and the UI suite in jsdom. The
+UI setup clears `localStorage` before each test and **fails any test where React logs
+a warning** — duplicate keys, invalid props, or updates outside `act`. That guard
+exists because a mangled `key` slipped through a green suite once; the browser console
+caught it, so now the tests do.
