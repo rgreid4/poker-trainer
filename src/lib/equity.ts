@@ -18,6 +18,7 @@ export interface EquityOptions {
 export interface EquityResult {
   /** Share of the pot the hero expects to win, ties counted fractionally. */
   equity: number;
+  /** How often each result happened. These three sum to 1. */
   win: number;
   tie: number;
   lose: number;
@@ -85,7 +86,10 @@ export function estimateEquity(options: EquityOptions): EquityResult {
   const heroCards: Card[] = new Array(7);
 
   let win = 0;
-  let tie = 0;
+  // Ties are counted twice over: how often they happen, for reporting, and the
+  // share of the pot they are worth, which is what equity is built from.
+  let tieCount = 0;
+  let tieEquity = 0;
   let lose = 0;
   let samples = 0;
   const perWin = new Float64Array(oppCount);
@@ -153,15 +157,17 @@ export function estimateEquity(options: EquityOptions): EquityResult {
 
     samples += 1;
     if (beaten) lose += 1;
-    else if (tiedWith > 0) tie += 1 / (tiedWith + 1);
-    else win += 1;
+    else if (tiedWith > 0) {
+      tieCount += 1;
+      tieEquity += 1 / (tiedWith + 1);
+    } else win += 1;
   }
 
   const denom = samples || 1;
   return {
-    equity: (win + tie) / denom,
+    equity: (win + tieEquity) / denom,
     win: win / denom,
-    tie: tie / denom,
+    tie: tieCount / denom,
     lose: lose / denom,
     samples,
     perOpponent: Array.from({ length: oppCount }, (_, o) =>
@@ -181,7 +187,8 @@ export function equityVsRandom(
   const known: Card[] = [...hero, ...board];
   const used = new Uint8Array(DECK_SIZE);
   let win = 0;
-  let tie = 0;
+  let tieCount = 0;
+  let tieEquity = 0;
   let lose = 0;
   const fullBoard: Card[] = new Array(5);
   const boardToDeal = 5 - board.length;
@@ -222,14 +229,16 @@ export function equityVsRandom(
       } else if (score === heroScore) ties += 1;
     }
     if (beaten) lose += 1;
-    else if (ties > 0) tie += 1 / (ties + 1);
-    else win += 1;
+    else if (ties > 0) {
+      tieCount += 1;
+      tieEquity += 1 / (ties + 1);
+    } else win += 1;
   }
 
   return {
-    equity: (win + tie) / iterations,
+    equity: (win + tieEquity) / iterations,
     win: win / iterations,
-    tie: tie / iterations,
+    tie: tieCount / iterations,
     lose: lose / iterations,
     samples: iterations,
     perOpponent: [],

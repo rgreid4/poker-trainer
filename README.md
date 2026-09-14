@@ -101,6 +101,14 @@ taught. "Why?" expands the full reasoning — the spot-specific paragraphs, ever
 number with its context, the concept in full, and the close-spot and house-game
 notes. The choice is remembered, so if you prefer the long version it stays open.
 
+## Where the equity number comes from
+
+Expanding "Why?" shows the working behind the equity: how many runouts were
+simulated, how they finished (won, tied, lost), and for each opponent their
+archetype, what they did this hand, how many two-card combinations their range
+still contains, and your equity against them alone. The estimate is only as good
+as those ranges, so the panel shows them rather than asking you to trust a number.
+
 ## How a decision gets graded
 
 1. **Read the opponents.** Each live opponent starts from the preflop range their

@@ -1,5 +1,6 @@
 import { STREET_LABELS } from "@/lib/handLog";
 import type { DecisionRecord } from "@/lib/strategy/decision";
+import type { EquityWorking } from "@/lib/strategy/explain";
 import { GRADE_LABELS, GRADE_STYLES } from "@/lib/strategy/grade";
 
 export function GradeBadge({
@@ -60,6 +61,7 @@ export function FeedbackPanel({ decision, detailed, onToggleDetail }: FeedbackPa
         {explanation.keyNumbers.map((entry) => (
           <span
             key={entry.label}
+            title={entry.hint}
             className="rounded-lg bg-white/5 px-2 py-1 text-[0.7rem] text-white/60"
           >
             {entry.label}{" "}
@@ -118,6 +120,8 @@ export function FeedbackPanel({ decision, detailed, onToggleDetail }: FeedbackPa
             ))}
           </dl>
 
+          <EquityWorkingBlock working={explanation.equityWorking} />
+
           <p className="text-[0.7rem] leading-relaxed text-white/50">
             <span className="font-semibold text-sky-200/80">{explanation.conceptName}:</span>{" "}
             {explanation.conceptBlurb}
@@ -137,5 +141,72 @@ export function FeedbackPanel({ decision, detailed, onToggleDetail }: FeedbackPa
         </div>
       ) : null}
     </section>
+  );
+}
+
+const percent = (value: number) => `${Math.round(value * 100)}%`;
+
+/**
+ * Shows where the equity number came from: how many runouts were simulated,
+ * how they finished, and what range each opponent was dealt from. The estimate
+ * is only as good as those ranges, so they are worth seeing.
+ */
+function EquityWorkingBlock({ working }: { working: EquityWorking }) {
+  // Round so the three shares always add up to a hundred on screen.
+  const wonPct = Math.round(working.win * 100);
+  const tiedPct = Math.round(working.tie * 100);
+  const lostPct = 100 - wonPct - tiedPct;
+
+  const street =
+    working.boardCards === 0
+      ? "all five board cards"
+      : working.boardCards === 5
+        ? "no more cards"
+        : `the remaining ${5 - working.boardCards} board card${5 - working.boardCards === 1 ? "" : "s"}`;
+
+  return (
+    <div className="rounded-lg bg-white/5 p-2.5">
+      <h4 className="mb-1.5 text-[0.6rem] font-semibold uppercase tracking-[0.15em] text-white/40">
+        How the equity was worked out
+      </h4>
+
+      <p className="text-[0.7rem] leading-relaxed text-white/60">
+        {working.runouts.toLocaleString()} runouts: each one deals every opponent a hand from the
+        range below, deals {street}, and scores every hand. You won{" "}
+        <span className="font-semibold text-white/85">{percent(working.win)}</span>, tied{" "}
+        <span className="font-semibold text-white/85">{percent(working.tie)}</span> and lost{" "}
+        <span className="font-semibold text-white/85">{percent(working.lose)}</span> of them.
+      </p>
+
+      {working.opponents.length > 0 ? (
+        <ul className="mt-2 flex flex-col gap-1.5">
+          {working.opponents.map((opponent) => (
+            <li key={opponent.seat} className="text-[0.7rem] leading-snug">
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="truncate text-white/80">
+                  <span className="font-semibold">{opponent.name}</span>
+                  <span className="text-white/45">
+                    {" "}
+                    · {opponent.profileName.toLowerCase()} · {opponent.readLabel}
+                  </span>
+                </span>
+                <span className="shrink-0 tabular-nums text-white/60">
+                  you {percent(opponent.equityVs)}
+                </span>
+              </div>
+              <div className="text-white/45">
+                {opponent.combos} hands in their range ({percent(opponent.widthPercent)} of all
+                starting hands)
+              </div>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+
+      <p className="mt-2 text-[0.65rem] leading-relaxed text-white/35">
+        Those ranges come from each player&apos;s profile and what they have actually done this
+        hand, so the equity is an estimate against a modelled range — not a solved number.
+      </p>
+    </div>
   );
 }

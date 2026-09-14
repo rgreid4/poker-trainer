@@ -14,7 +14,9 @@ export interface Explanation {
    */
   oneLiner: string;
   /** The two numbers that actually drove the decision. */
-  keyNumbers: Array<{ label: string; value: string }>;
+  keyNumbers: Array<{ label: string; value: string; hint?: string }>;
+  /** Where the equity number came from, so it can be checked rather than trusted. */
+  equityWorking: EquityWorking;
   /** Two to four sentences on why, in terms of how these opponents play. */
   sentences: string[];
   /** The numbers behind the decision, labelled for display. */
@@ -26,6 +28,49 @@ export interface Explanation {
   houseGameNote: string | null;
   /** Set when the spot is close and more than one action is fine. */
   closeNote: string | null;
+}
+
+/** One opponent's contribution to the equity estimate. */
+export interface OpponentWorking {
+  seat: number;
+  name: string;
+  profileName: string;
+  /** What they did, in words: "limped", "raised", "bet big". */
+  readLabel: string;
+  /** How many two-card combinations their range still contains. */
+  combos: number;
+  /** That range as a share of all starting hands. */
+  widthPercent: number;
+  /** Hero's equity against this player alone. */
+  equityVs: number;
+}
+
+export interface EquityWorking {
+  /** How many runouts were simulated. */
+  runouts: number;
+  win: number;
+  tie: number;
+  lose: number;
+  /** Cards already known, for the line that says what was dealt. */
+  boardCards: number;
+  opponents: OpponentWorking[];
+}
+
+const READ_LABELS: Record<string, string> = {
+  passive: "checked",
+  called: "called",
+  smallBet: "bet small",
+  bet: "bet",
+  bigBet: "bet big",
+  raised: "raised",
+};
+
+function readLabel(read: string, preflop: boolean, hasActed: boolean): string {
+  // "passive" covers both checking and not having acted yet, which are very
+  // different reads, so they get different words.
+  if (read === "passive") return hasActed ? "checked" : "yet to act";
+  if (preflop && read === "called") return "limped or called";
+  return READ_LABELS[read] ?? read;
 }
 
 export function describeAction(action: ScoredAction["action"], bigBlind: number): string {
@@ -135,21 +180,58 @@ export function explain(
   // taught rather than the full spot-specific paragraph.
   const oneLiner = rec.best.short;
 
+  const equityHint = `from ${rec.equity.samples.toLocaleString()} simulated runouts`;
   const keyNumbers =
     rec.toCall > 0
       ? [
-          { label: "Your equity", value: `${Math.round(rec.equity.equity * 100)}%` },
-          { label: "You need", value: `${Math.round(rec.potOdds * 100)}%` },
+          {
+            label: "Your equity",
+            value: `${Math.round(rec.equity.equity * 100)}%`,
+            hint: equityHint,
+          },
+          {
+            label: "You need",
+            value: `${Math.round(rec.potOdds * 100)}%`,
+            hint: `calling ${formatMoney(rec.toCall)} into ${formatMoney(rec.pot)}`,
+          },
         ]
       : [
-          { label: "Your equity", value: `${Math.round(rec.equity.equity * 100)}%` },
+          {
+            label: "Your equity",
+            value: `${Math.round(rec.equity.equity * 100)}%`,
+            hint: equityHint,
+          },
           { label: "Pot", value: formatMoney(rec.pot) },
         ];
+
+  const equityWorking: EquityWorking = {
+    runouts: rec.equity.samples,
+    win: rec.equity.win,
+    tie: rec.equity.tie,
+    lose: rec.equity.lose,
+    boardCards: state.board.length,
+    opponents: rec.opponents.map((read, index) => ({
+      seat: read.seat,
+      name: state.players[read.seat].name,
+      profileName: read.profile.name,
+      readLabel: readLabel(
+        read.read,
+        rec.street === "preflop",
+        state.history.some(
+          (a) => a.seat === read.seat && a.street === state.street && a.type !== "post",
+        ),
+      ),
+      combos: read.range.length,
+      widthPercent: read.width,
+      equityVs: rec.equity.perOpponent[index] ?? 0,
+    })),
+  };
 
   return {
     recommended: bestText,
     oneLiner,
     keyNumbers,
+    equityWorking,
     sentences: sentences.slice(0, 4),
     numbers,
     conceptId: rec.best.concept,

@@ -381,3 +381,89 @@ describe("equity and range modelling", () => {
     expect(advise(sixWay).equity.equity).toBeLessThan(advise(headsUp).equity.equity);
   });
 });
+
+describe("showing the working behind the equity", () => {
+  it("reports the runouts, how they finished, and each opponent's modelled range", () => {
+    let state = testHand({
+      heroSeat: 5,
+      holes: { 5: "Ah Kd" },
+      profiles: ["station", "limper", "station", "station", "station", "hero"],
+    });
+    state = applyAction(state, { type: "raise", to: 200 }); // UTG raises
+    state = applyAction(state, { type: "call" }); // MP calls
+    state = applyAction(state, { type: "fold" });
+    state = applyAction(state, { type: "fold" });
+
+    const rec = advise(state);
+    const working = explain(state, rec, gradeDecision(rec, { type: "call" })).equityWorking;
+
+    expect(working.runouts).toBe(ITERATIONS);
+    expect(working.win + working.tie + working.lose).toBeCloseTo(1, 5);
+    expect(working.boardCards).toBe(0);
+
+    // One entry per live opponent, each with a real range behind it.
+    expect(working.opponents).toHaveLength(rec.opponents.length);
+    for (const opponent of working.opponents) {
+      expect(opponent.name).toBeTruthy();
+      expect(opponent.combos).toBeGreaterThan(0);
+      expect(opponent.widthPercent).toBeGreaterThan(0);
+      expect(opponent.widthPercent).toBeLessThanOrEqual(1);
+      expect(opponent.equityVs).toBeGreaterThan(0);
+      expect(opponent.equityVs).toBeLessThanOrEqual(1);
+    }
+
+    // The raiser is on a narrower range than the caller, and says so.
+    const raiser = working.opponents.find((o) => o.readLabel === "raised");
+    const caller = working.opponents.find((o) => o.readLabel === "limped or called");
+    expect(raiser).toBeDefined();
+    expect(caller).toBeDefined();
+    expect(raiser!.combos).toBeLessThan(caller!.combos);
+
+    // Equity against the field is never better than against any one of them.
+    for (const opponent of working.opponents) {
+      expect(rec.equity.equity).toBeLessThanOrEqual(opponent.equityVs + 0.001);
+    }
+  });
+
+  it("counts the cards still to come", () => {
+    let state = testHand({
+      tableSize: 2,
+      buttonSeat: 0,
+      heroSeat: 0,
+      profiles: ["hero", "station"],
+      holes: { 0: "Ah Kc", 1: "9d 5h" },
+      board: "Ad 8s 3h",
+    });
+    state = applyAction(state, { type: "call" });
+    state = applyAction(state, { type: "check" });
+    state = applyAction(state, { type: "check" });
+
+    const rec = advise(state);
+    const working = explain(state, rec, gradeDecision(rec, { type: "check" })).equityWorking;
+    expect(working.boardCards).toBe(3);
+    expect(working.opponents).toHaveLength(1);
+    expect(working.opponents[0].profileName).toBe("Calling station");
+  });
+});
+
+describe("describing what each opponent did", () => {
+  it("separates players who checked from players who have not acted yet", () => {
+    let state = testHand({
+      heroSeat: 5,
+      holes: { 5: "Ah Kd" },
+      profiles: ["station", "station", "station", "station", "station", "hero"],
+    });
+    state = applyAction(state, { type: "call" }); // UTG limps
+    state = applyAction(state, { type: "fold" }); // MP folds, so the hero is up
+    expect(state.actingSeat).toBe(5);
+
+    const rec = advise(state);
+    const working = explain(state, rec, gradeDecision(rec, { type: "fold" })).equityWorking;
+
+    const limper = working.opponents.find((o) => o.seat === 3);
+    // The button has not had a turn yet when the hero acts from the cutoff.
+    const waiting = working.opponents.find((o) => o.seat === 0);
+    expect(limper?.readLabel).toBe("limped or called");
+    expect(waiting?.readLabel).toBe("yet to act");
+  });
+});

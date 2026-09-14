@@ -194,6 +194,11 @@ export function HelpPanel({ onClose }: { onClose: () => void }) {
           pair. <span className="text-white/90">SPR</span> — stack divided by pot — tells you how
           committed you are: under about 1.5, a strong hand is simply getting in.
         </p>
+        <p className="text-xs leading-relaxed text-white/60">
+          Open <span className="font-semibold text-white/85">Why?</span> under any graded decision
+          to see the working: how many runouts were simulated, how they finished, and the exact
+          range each opponent was dealt from.
+        </p>
       </Section>
 
       <Section title="Beating a loose home game">

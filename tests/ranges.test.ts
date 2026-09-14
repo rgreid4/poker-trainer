@@ -138,3 +138,36 @@ describe("equity estimates", () => {
     expect(result.equity).toBeLessThan(result.perOpponent[0]);
   });
 });
+
+describe("equity result reporting", () => {
+  it("reports win, tie and lose as frequencies that sum to one", () => {
+    const rng = makeRng(77);
+    const result = estimateEquity({
+      hero: parseCards("As Ks"),
+      board: parseCards("Ah Kh 2c"),
+      opponents: [parseRange("AKo, 22, 72o"), parseRange("QQ, JJ")],
+      iterations: 3000,
+      rng,
+    });
+    expect(result.win + result.tie + result.lose).toBeCloseTo(1, 6);
+    // Equity counts a split as half a pot, so it sits between winning outright
+    // and winning or tying.
+    expect(result.equity).toBeGreaterThanOrEqual(result.win);
+    expect(result.equity).toBeLessThanOrEqual(result.win + result.tie);
+  });
+
+  it("splits a guaranteed tie down the middle", () => {
+    // The board plays: both hands are the same royal flush.
+    const rng = makeRng(78);
+    const result = estimateEquity({
+      hero: parseCards("2c 3d"),
+      board: parseCards("As Ks Qs Js Ts"),
+      opponents: [parseRange("44")],
+      iterations: 500,
+      rng,
+    });
+    expect(result.tie).toBe(1);
+    expect(result.win).toBe(0);
+    expect(result.equity).toBeCloseTo(0.5, 10);
+  });
+});
