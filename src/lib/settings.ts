@@ -8,6 +8,8 @@ export interface StoredSettings {
   showProfiles: boolean;
   speedMs: number;
   mode: PracticeModeId;
+  /** How much feedback to show after each decision. */
+  detail: "simple" | "full";
 }
 
 export const SPEED_NORMAL = 550;
@@ -37,6 +39,7 @@ export function sanitizeSettings(
       typeof input.showProfiles === "boolean" ? input.showProfiles : defaults.showProfiles,
     speedMs: speedMs === SPEED_FAST || speedMs === SPEED_NORMAL ? speedMs : defaults.speedMs,
     mode: knownMode ? (input.mode as PracticeModeId) : defaults.mode,
+    detail: input.detail === "full" || input.detail === "simple" ? input.detail : defaults.detail,
   };
 }
 

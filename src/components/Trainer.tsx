@@ -211,7 +211,15 @@ export function Trainer() {
             </div>
 
             <aside className="flex flex-col gap-3 lg:w-80 lg:shrink-0">
-              {trainer.feedback ? <FeedbackPanel decision={trainer.feedback} /> : null}
+              {trainer.feedback ? (
+                <FeedbackPanel
+                  decision={trainer.feedback}
+                  detailed={settings.detail === "full"}
+                  onToggleDetail={() =>
+                    setSettings({ detail: settings.detail === "full" ? "simple" : "full" })
+                  }
+                />
+              ) : null}
               <div className="min-h-40 flex-1">
                 <ActionLog state={state} />
               </div>

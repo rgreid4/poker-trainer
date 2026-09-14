@@ -109,14 +109,23 @@ describe("feedback", () => {
     if (!button) return;
     await user.click(button);
 
-    // A grade badge appears with the recommended play and the key concept.
+    // The simple view: a grade, one line of reasoning, and two numbers.
     const grade = await waitFor(
       () => screen.getByText(/^(Best|Good|Acceptable|Mistake|Blunder)$/),
       { timeout: 8000 },
     );
     expect(grade).toBeTruthy();
-    expect(screen.getByText(/Equity/)).toBeTruthy();
-    expect(screen.getByText(/decision$/i)).toBeTruthy();
+    expect(screen.getByText(/Your equity/)).toBeTruthy();
+    expect(screen.getByText(/🎯/)).toBeTruthy();
+    // The long reasoning is not shown until it is asked for.
+    expect(screen.queryByText(/^Position$/)).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: /Why\?/ }));
+    expect(screen.getByText(/^Equity$/)).toBeTruthy();
+    expect(screen.getByText(/^Position$/)).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: /^Less$/ }));
+    expect(screen.queryByText(/^Position$/)).toBeNull();
   }, 25000);
 
   it("lists every graded decision in the hand summary", async () => {
@@ -127,22 +136,31 @@ describe("feedback", () => {
     // Heads up at the fast setting, so a whole hand plays out inside the test.
     await user.selectOptions(screen.getByLabelText(/Table size/), "2");
     await user.click(screen.getByRole("button", { name: /Normal speed/ }));
-    await waitForHeroTurn();
+    // Heads up the button sometimes folds preflop, which ends the hand before
+    // the hero ever acts, so play on until a hand actually gives us decisions.
+    let summarised = false;
+    for (let hand = 0; hand < 4 && !summarised; hand++) {
+      await waitForHeroTurn();
 
-    for (let i = 0; i < 60; i++) {
-      if (screen.queryByRole("button", { name: /Next hand/ })) break;
-      const check = screen.queryByRole("button", { name: /^Check/ });
-      const call = screen.queryByRole("button", { name: /^Call/ });
-      if (check ?? call) await user.click((check ?? call) as HTMLElement);
-      await act(async () => {
-        await new Promise((resolve) => setTimeout(resolve, 120));
-      });
+      for (let i = 0; i < 60; i++) {
+        if (screen.queryByRole("button", { name: /Next hand/ })) break;
+        const check = screen.queryByRole("button", { name: /^Check/ });
+        const call = screen.queryByRole("button", { name: /^Call/ });
+        if (check ?? call) await user.click((check ?? call) as HTMLElement);
+        await act(async () => {
+          await new Promise((resolve) => setTimeout(resolve, 120));
+        });
+      }
+
+      const nextHand = await waitFor(
+        () => screen.getByRole("button", { name: /Next hand/ }),
+        { timeout: 20000 },
+      );
+      summarised = Boolean(screen.queryByText(/decisions graded good or better/));
+      if (!summarised) await user.click(nextHand);
     }
 
-    await waitFor(() => expect(screen.getByRole("button", { name: /Next hand/ })).toBeTruthy(), {
-      timeout: 20000,
-    });
-    expect(screen.getByText(/decisions graded good or better/)).toBeTruthy();
+    expect(summarised).toBe(true);
   }, 60000);
 });
 

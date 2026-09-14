@@ -14,6 +14,7 @@ const defaults: StoredSettings = {
   showProfiles: true,
   speedMs: SPEED_NORMAL,
   mode: "full",
+  detail: "simple",
 };
 
 describe("settings validation", () => {
@@ -23,6 +24,7 @@ describe("settings validation", () => {
       showProfiles: false,
       speedMs: SPEED_FAST,
       mode: "iso",
+      detail: "full",
     };
     expect(sanitizeSettings(stored, defaults)).toEqual(stored);
   });
@@ -59,12 +61,19 @@ describe("settings persistence", () => {
   });
 
   it("round-trips the settings a player chose", () => {
-    saveSettings({ tableSize: 4, showProfiles: false, speedMs: SPEED_FAST, mode: "draws" });
+    saveSettings({
+      tableSize: 4,
+      showProfiles: false,
+      speedMs: SPEED_FAST,
+      mode: "draws",
+      detail: "full",
+    });
     expect(loadSettings(defaults)).toEqual({
       tableSize: 4,
       showProfiles: false,
       speedMs: SPEED_FAST,
       mode: "draws",
+      detail: "full",
     });
   });
 

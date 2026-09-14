@@ -152,3 +152,119 @@ export function conceptName(id: ConceptId): string {
 }
 
 export const CONCEPT_IDS = Object.keys(CONCEPTS) as ConceptId[];
+
+/**
+ * One short line per concept and action, used for the plain feedback the
+ * trainer leads with. The longer, spot-specific reasoning still sits behind
+ * "Show details" — this is what you read at a glance between hands.
+ */
+export type ShortReasonCategory = "fold" | "check" | "call" | "aggressive";
+
+export const CONCEPT_SHORT_REASONS: Record<
+  ConceptId,
+  Partial<Record<ShortReasonCategory, string>>
+> = {
+  "raise-dont-limp": {
+    aggressive: "Good hands want a raised pot.",
+    call: "Limping gives up the lead and invites everyone in.",
+    check: "A free look wastes a hand worth raising.",
+    fold: "This hand is too good to fold.",
+  },
+  "isolate-limpers": {
+    aggressive: "Raise big — limpers call anyway.",
+    call: "Limping along wastes the best hand at the table.",
+    check: "Checking passes up a clear value raise.",
+    fold: "This is well ahead of a limping range.",
+  },
+  position: {
+    call: "Good enough to see a flop in position.",
+    fold: "A little tight, but never terrible.",
+    aggressive: "Raising bloats the pot with a hand that does not want one.",
+  },
+  "three-bet-value": {
+    aggressive: "3-bet for value — they call with worse.",
+    call: "Calling leaves value on the table.",
+    fold: "Far too strong to fold.",
+  },
+  "fold-preflop": {
+    fold: "Not strong enough to play from this seat.",
+    call: "Cheap is not the same as profitable.",
+    check: "Take the free look.",
+    aggressive: "Raising this builds a pot with the worst of it.",
+  },
+  "short-stack-shove": {
+    aggressive: "Too short to play after the flop — get it in.",
+    call: "Calling leaves you committed with no way to win without hitting.",
+    fold: "Too good to fold this short.",
+  },
+  "value-bet-bigger": {
+    aggressive: "Bet big — they call too much to bet small.",
+    check: "Checking here just misses value.",
+    call: "Calling leaves money behind against someone who pays off raises.",
+    fold: "Far too strong to fold.",
+  },
+  "thin-value": {
+    aggressive: "Bet — worse hands call you here.",
+    check: "Safe, but it passes up a bet worse hands pay off.",
+    call: "Calling is fine, betting is better.",
+    fold: "Too good to fold.",
+  },
+  "dont-slow-play": {
+    aggressive: "Bet big — they will pay you off.",
+    check: "Checking a big hand gives free cards and wins a small pot.",
+    call: "Calling keeps the pot small with a hand that wants a big one.",
+    fold: "Never fold a hand this strong.",
+  },
+  "charge-draws": {
+    aggressive: "Bet big and make the draws pay.",
+    check: "A free card is exactly what they want.",
+    call: "Calling lets the draws in cheaply.",
+    fold: "Much too strong to fold.",
+  },
+  "dont-bluff-stations": {
+    check: "No hand and no fold equity — give up cheaply.",
+    aggressive: "They do not fold. Do not bluff them.",
+    call: "Calling with nothing hoping to improve is a donation.",
+    fold: "Fold and wait for a hand.",
+  },
+  "respect-passive-aggression": {
+    fold: "They do not bluff. Believe them and fold.",
+    call: "This is how stacks disappear against passive players.",
+    aggressive: "Raising into the one range that beats you is the worst option.",
+  },
+  "pot-odds": {
+    call: "The price is right.",
+    fold: "The price is wrong.",
+    check: "Take the free card.",
+    aggressive: "No value and no fold equity.",
+  },
+  "draws-need-a-price": {
+    call: "Good price for the draw — call.",
+    fold: "Not enough equity for this price.",
+    aggressive: "Semi-bluffing needs folds, and these players do not fold.",
+    check: "Take the free card.",
+  },
+  "multiway-caution": {
+    check: "Too many players — keep the pot small.",
+    call: "Cheap and multiway is when this hand plays well.",
+    aggressive: "Multiway, this hand does not want a big pot.",
+    fold: "Folding is perfectly fine here.",
+  },
+  "pot-control": {
+    check: "A medium hand wants a small pot.",
+    aggressive: "Betting invites a raise you cannot call.",
+    call: "Calling is fine with a hand that wants showdown.",
+    fold: "No need to fold this cheaply.",
+  },
+};
+
+const GENERIC_SHORT: Record<ShortReasonCategory, string> = {
+  fold: "Folding is the play here.",
+  check: "Checking is the play here.",
+  call: "Calling is the play here.",
+  aggressive: "Betting is the play here.",
+};
+
+export function shortReason(concept: ConceptId, category: ShortReasonCategory): string {
+  return CONCEPT_SHORT_REASONS[concept]?.[category] ?? GENERIC_SHORT[category];
+}

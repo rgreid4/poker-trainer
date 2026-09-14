@@ -8,6 +8,13 @@ import type { Recommendation, ScoredAction } from "./recommend";
 export interface Explanation {
   /** Plain-English name of the recommended play, e.g. "Raise to $4". */
   recommended: string;
+  /**
+   * The whole reason in one line. This is what the feedback panel leads with;
+   * everything below is available behind "Show details".
+   */
+  oneLiner: string;
+  /** The two numbers that actually drove the decision. */
+  keyNumbers: Array<{ label: string; value: string }>;
   /** Two to four sentences on why, in terms of how these opponents play. */
   sentences: string[];
   /** The numbers behind the decision, labelled for display. */
@@ -124,8 +131,25 @@ export function explain(
     ? "This is a house-game adjustment. Against strong, balanced players it would be a leak."
     : null;
 
+  // The headline: one short line saying why, in the terms of the concept being
+  // taught rather than the full spot-specific paragraph.
+  const oneLiner = rec.best.short;
+
+  const keyNumbers =
+    rec.toCall > 0
+      ? [
+          { label: "Your equity", value: `${Math.round(rec.equity.equity * 100)}%` },
+          { label: "You need", value: `${Math.round(rec.potOdds * 100)}%` },
+        ]
+      : [
+          { label: "Your equity", value: `${Math.round(rec.equity.equity * 100)}%` },
+          { label: "Pot", value: formatMoney(rec.pot) },
+        ];
+
   return {
     recommended: bestText,
+    oneLiner,
+    keyNumbers,
     sentences: sentences.slice(0, 4),
     numbers,
     conceptId: rec.best.concept,

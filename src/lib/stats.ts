@@ -88,7 +88,8 @@ export function recordDecision(
       chosenLabel: record.chosenLabel,
       recommendedLabel: record.recommendedLabel,
       concept: record.concept,
-      lesson: record.explanation.sentences[1] ?? record.explanation.sentences[0] ?? "",
+      // The one-line version is what makes a review list worth scanning.
+      lesson: record.explanation.oneLiner,
     });
     mistakes.length = Math.min(mistakes.length, MAX_TRACKED_MISTAKES);
   }

@@ -20,6 +20,7 @@ export const DEFAULT_TRAINER_SETTINGS: TrainerSettings = {
   showProfiles: true,
   speedMs: SPEED_NORMAL,
   mode: DEFAULT_MODE,
+  detail: "simple",
 };
 
 export interface UseTrainerOptions {

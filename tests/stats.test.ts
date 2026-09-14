@@ -27,6 +27,8 @@ function record(overrides: Partial<DecisionRecord> = {}): DecisionRecord {
     recommendedLabel: "Bet $2",
     explanation: {
       recommended: "Bet $2",
+      oneLiner: "Bet big — they call too much to bet small.",
+      keyNumbers: [{ label: "Your equity", value: "62%" }],
       sentences: ["Bet $2 is the play.", "They call too much, so size up."],
       numbers: [],
       conceptId: "value-bet-bigger",
@@ -101,7 +103,7 @@ describe("stats totals", () => {
     }
     expect(stats.mistakes).toHaveLength(MAX_TRACKED_MISTAKES);
     expect(stats.mistakes[0].chosenLabel).toBe(`Call $${MAX_TRACKED_MISTAKES + 4}`);
-    expect(stats.mistakes[0].lesson).toMatch(/size up/);
+    expect(stats.mistakes[0].lesson).toMatch(/they call too much/i);
   });
 
   it("does not record good decisions as mistakes", () => {

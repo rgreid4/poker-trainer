@@ -93,6 +93,14 @@ house-game adjustment that would be a mistake against good players, it says that
 - **Phase 5 — polish: done.** Help panel, remembered settings, animation and mobile
   passes, and a guard that fails the tests on any React warning.
 
+## Feedback
+
+After every decision the panel shows one line: what you did, what was better, and
+why in a single sentence, plus the two numbers that drove it and the concept being
+taught. "Why?" expands the full reasoning — the spot-specific paragraphs, every
+number with its context, the concept in full, and the close-spot and house-game
+notes. The choice is remembered, so if you prefer the long version it stays open.
+
 ## How a decision gets graded
 
 1. **Read the opponents.** Each live opponent starts from the preflop range their

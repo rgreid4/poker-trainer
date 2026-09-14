@@ -32,7 +32,7 @@ import { type HandKey, type WeightedRange, handKey, parseRange, rangeContains } 
 import { potOdds as potOddsOf, stackToPotRatio } from "../pot";
 import type { Position } from "../table";
 import type { HandState, LegalAction, SizingTag, Street } from "../types";
-import type { ConceptId } from "./concepts";
+import { type ConceptId, shortReason } from "./concepts";
 
 export type ActionCategory = "fold" | "check" | "call" | "aggressive";
 
@@ -42,7 +42,10 @@ export interface ScoredAction {
   /** 0 to 1, where 1 is the recommended play. */
   score: number;
   concept: ConceptId;
+  /** The full, spot-specific reasoning. */
   reason: string;
+  /** One line, for the feedback the trainer leads with. */
+  short: string;
   /** True when this play is specifically a loose-home-game adjustment. */
   houseAdjustment: boolean;
 }
@@ -164,12 +167,14 @@ export function recommend(options: RecommendOptions): Recommendation {
     const category = categoryOf(action);
     let score = plan[category];
     if (category === "aggressive") score *= sizingFit(ctx, action, plan.idealTo);
+    const concept = plan.conceptByCategory?.[category] ?? plan.concept;
     return {
       action,
       category,
       score: Math.max(0, Math.min(1, score)),
-      concept: plan.conceptByCategory?.[category] ?? plan.concept,
+      concept,
       reason: plan.reasons[category] ?? "",
+      short: shortReason(concept, category),
       houseAdjustment: Boolean(plan.houseAdjustment),
     };
   });
